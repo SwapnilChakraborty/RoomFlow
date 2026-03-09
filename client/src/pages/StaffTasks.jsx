@@ -14,7 +14,7 @@ export function StaffTasks() {
     useEffect(() => {
         const fetchInitialTasks = async () => {
             try {
-                const response = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'});
+                const response = await fetch('http://localhost:5001/api/activity');
                 const data = await response.json();
                 setTasks(data.map(item => ({
                     id: item.id,

@@ -39,7 +39,7 @@ export function RoomManagement() {
 
     const fetchRooms = async () => {
         try {
-            const response = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'});
+            const response = await fetch('http://localhost:5001/api/rooms');
             const data = await response.json();
             setRooms(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -54,7 +54,7 @@ export function RoomManagement() {
         e.preventDefault();
         setAllotting(true);
         try {
-            const response = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}, {
+            const response = await fetch('http://localhost:5001/api/allot-room', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roomNumber: allotModal.roomNumber, guestName })
@@ -77,7 +77,7 @@ export function RoomManagement() {
     const handleCheckout = async (roomNumber) => {
         if (!confirm(`Check out Room ${roomNumber}?`)) return;
         try {
-            const response = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}, {
+            const response = await fetch('http://localhost:5001/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roomNumber })
@@ -92,7 +92,7 @@ export function RoomManagement() {
 
     const handleUpdateStatus = async (roomNumber, status) => {
         try {
-            const response = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}, {
+            const response = await fetch('http://localhost:5001/api/update-room-status', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roomNumber, status })
@@ -108,7 +108,7 @@ export function RoomManagement() {
     const handleMaintenance = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}, {
+            const response = await fetch('http://localhost:5001/api/update-room-status', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

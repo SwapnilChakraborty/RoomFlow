@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 
 const SocketContext = createContext();
 
-const SOCKET_URL = import.meta.env.VITE_APP_SOCKET_URL || import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com';
+const SOCKET_URL = import.meta.env.VITE_APP_SOCKET_URL || 'http://localhost:5001';
 
 export function SocketProvider({ children }) {
     const [socket, setSocket] = useState(null);

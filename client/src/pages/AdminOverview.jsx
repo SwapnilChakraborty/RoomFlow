@@ -27,8 +27,8 @@ export function AdminOverview() {
         const fetchData = async () => {
             try {
                 const [statsRes, activityRes] = await Promise.all([
-                    fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}),
-                    fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'})
+                    fetch('http://localhost:5001/api/stats'),
+                    fetch('http://localhost:5001/api/activity')
                 ]);
                 const statsData = await statsRes.json();
                 const activityData = await activityRes.json();

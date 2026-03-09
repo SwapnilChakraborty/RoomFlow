@@ -27,7 +27,7 @@ export function GuestCart() {
         };
 
         try {
-            const response = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}, {
+            const response = await fetch('http://localhost:5001/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)

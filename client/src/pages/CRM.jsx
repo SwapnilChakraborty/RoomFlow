@@ -27,7 +27,7 @@ export function CRM() {
 
     const fetchLeads = async () => {
         try {
-            const res = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'});
+            const res = await fetch('http://localhost:5001/api/crm/leads');
             const data = await res.json();
             setLeads(data);
         } catch (err) {
@@ -40,7 +40,7 @@ export function CRM() {
     const handleAddLead = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}, {
+            const res = await fetch('http://localhost:5001/api/crm/leads', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newLead)
