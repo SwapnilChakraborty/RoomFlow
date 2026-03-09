@@ -24,7 +24,7 @@ export function AdminLayout() {
     React.useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const res = await fetch('http://localhost:5001/api/settings');
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}/api/settings`);
                 const data = await res.json();
                 setCrmEnabled(data.crmEnabled);
             } catch (err) {

@@ -27,21 +27,13 @@ export function GuestCart() {
         };
 
         try {
-            const response = await fetch('http://localhost:5001/api/orders', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderData)
             });
 
             if (!response.ok) throw new Error('Order submission failed');
-
-            emitRequest('new_request', {
-                room: roomNumber,
-                type: 'order',
-                details: `${cart.length} items: ${cart.map(i => `${i.name} (x${i.quantity})`).join(', ')}`,
-                total: total,
-                priority: 'normal'
-            });
 
             alert('Order placed successfully!');
             clearCart();

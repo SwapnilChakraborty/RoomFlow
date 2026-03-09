@@ -625,7 +625,7 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('update_status', (data) => {
+    socket.on('update_status', async (data) => {
         const { requestId, status, roomNumber } = data;
 
         // Handle underlying resource updates in mock mode
@@ -645,6 +645,23 @@ io.on('connection', (socket) => {
             if (order) order.status = status;
             const service = mockServiceRequests.find(s => s._id === requestId);
             if (service) service.status = status;
+        } else {
+            // Real DB Updates
+            try {
+                const order = await Order.findById(requestId);
+                if (order) {
+                    order.status = status;
+                    await order.save();
+                } else {
+                    const service = await ServiceRequest.findById(requestId);
+                    if (service) {
+                        service.status = status;
+                        await service.save();
+                    }
+                }
+            } catch (err) {
+                console.error('Error updating status in DB:', err);
+            }
         }
 
         io.to(`room_${roomNumber}`).emit('status_updated', { requestId, status });

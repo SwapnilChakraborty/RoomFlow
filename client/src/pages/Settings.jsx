@@ -30,7 +30,7 @@ export function Settings() {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch('http://localhost:5001/api/settings');
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}/api/settings`);
             const data = await res.json();
             setSettings(prev => ({ ...prev, ...data }));
         } catch (err) {
@@ -43,7 +43,7 @@ export function Settings() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const res = await fetch('http://localhost:5001/api/settings', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://hotel-mangment.onrender.com'}/api/settings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)
