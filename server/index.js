@@ -205,7 +205,7 @@ app.post('/api/orders', async (req, res) => {
         }
 
         io.emit('admin_activity', {
-            id: order._id,
+            id: order._id.toString(),
             room: order.roomNumber,
             type: 'order',
             details: order.items.map(i => `${i.name} (x${i.quantity})`).join(', '),
@@ -488,14 +488,14 @@ app.get('/api/activity', async (req, res) => {
 
         const activities = [
             ...serviceRequests.map(r => ({
-                id: r._id,
+                id: r._id.toString(),
                 text: `Room ${r.roomNumber}: ${r.type.charAt(0).toUpperCase() + r.type.slice(1)} Request`,
                 time: r.createdAt,
                 type: 'service',
                 status: r.status
             })),
             ...orders.map(o => ({
-                id: o._id,
+                id: o._id.toString(),
                 text: `Room ${o.roomNumber}: Order #${o._id.toString().substr(-5)}`,
                 time: o.createdAt,
                 type: 'order',
