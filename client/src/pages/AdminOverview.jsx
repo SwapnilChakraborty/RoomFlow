@@ -92,19 +92,19 @@ export function AdminOverview() {
         );
     }
     return (
-        <div className="space-y-10 animate-in fade-in duration-700">
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-700">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-4xl font-extrabold text-primary tracking-tight">Executive Dashboard</h1>
-                    <p className="text-slate-500 font-medium mt-1">Property overview for <span className="text-primary font-bold">Grand Hyatt RoomFlow</span></p>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Executive Dashboard</h1>
+                    <p className="text-sm md:text-base text-slate-500 font-medium mt-1">Property overview for <span className="text-primary font-bold">Grand Hyatt RoomFlow</span></p>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline" size="md" className="gap-2">
+                <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
+                    <Button variant="outline" size="md" className="gap-2 flex-1 md:flex-none justify-center">
                         <Download size={16} />
                         Export Data
                     </Button>
-                    <Button variant="primary" size="md" className="gap-2">
+                    <Button variant="primary" size="md" className="gap-2 flex-1 md:flex-none justify-center">
                         <Filter size={16} />
                         Filters
                     </Button>
@@ -145,16 +145,16 @@ export function AdminOverview() {
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 {/* Analytics Chart */}
-                <div className="xl:col-span-2 space-y-8">
-                    <Card className="p-10 border-slate-100 shadow-xl shadow-slate-200/40">
-                        <div className="flex justify-between items-center mb-10">
+                <div className="xl:col-span-2 space-y-6 md:space-y-8">
+                    <Card className="p-4 md:p-10 border-slate-100 shadow-xl shadow-slate-200/40">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-10 gap-4">
                             <div>
-                                <h2 className="text-2xl font-extrabold text-primary">Service Activity</h2>
-                                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mt-1">Last 7 Days</p>
+                                <h2 className="text-xl md:text-2xl font-extrabold text-primary">Service Activity</h2>
+                                <p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-widest mt-1">Last 7 Days</p>
                             </div>
-                            <div className="flex gap-2 bg-slate-50 p-1 rounded-xl">
-                                <button className="px-4 py-1.5 bg-white shadow-sm rounded-lg text-xs font-bold text-primary">Volume</button>
-                                <button className="px-4 py-1.5 text-xs font-bold text-slate-400 hover:text-primary transition-colors">Revenue</button>
+                            <div className="flex gap-2 bg-slate-50 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
+                                <button className="flex-1 sm:flex-none px-4 py-1.5 bg-white shadow-sm rounded-lg text-xs font-bold text-primary whitespace-nowrap">Volume</button>
+                                <button className="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold text-slate-400 hover:text-primary transition-colors whitespace-nowrap">Revenue</button>
                             </div>
                         </div>
                         <div className="w-full h-80">
@@ -171,36 +171,36 @@ export function AdminOverview() {
                         </div>
                     </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card soft className="p-8">
-                            <h2 className="text-xl font-extrabold text-primary mb-6">Staff Performance</h2>
-                            <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                        <Card soft className="p-4 md:p-8">
+                            <h2 className="text-lg md:text-xl font-extrabold text-primary mb-4 md:mb-6">Staff Performance</h2>
+                            <div className="space-y-4 md:space-y-6">
                                 <RankingItem label="Housekeeping Team" percentage={92} />
                                 <RankingItem label="Room Service (Kitchen)" percentage={85} />
                                 <RankingItem label="Laundry Service" percentage={78} />
                             </div>
                         </Card>
-                        <Card className="bg-primary p-8 text-white relative overflow-hidden flex flex-col justify-center items-center text-center">
+                        <Card className="bg-primary p-6 md:p-8 text-white relative overflow-hidden flex flex-col justify-center items-center text-center min-h-[250px]">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 -translate-y-1/2 translate-x-1/2 rounded-full"></div>
-                            <div className="relative z-10 w-24 h-24 rounded-full border-4 border-accent border-r-transparent flex items-center justify-center mb-4">
-                                <span className="text-3xl font-extrabold">98<span className="text-sm">%</span></span>
+                            <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-accent border-r-transparent flex items-center justify-center mb-4">
+                                <span className="text-2xl md:text-3xl font-extrabold">98<span className="text-sm">%</span></span>
                             </div>
-                            <h3 className="text-xl font-bold">Uptime Efficiency</h3>
-                            <p className="text-white/60 text-xs font-medium mt-2 max-w-[200px]">System is performing optimally with zero downtime reported today.</p>
+                            <h3 className="text-lg md:text-xl font-bold">Uptime Efficiency</h3>
+                            <p className="text-white/60 text-[10px] md:text-xs font-medium mt-2 max-w-[200px]">System is performing optimally with zero downtime reported today.</p>
                         </Card>
                     </div>
                 </div>
 
                 {/* Live Activity Feed */}
                 <Card className="flex flex-col h-full border-slate-100 p-0 overflow-hidden shadow-2xl shadow-slate-200/30">
-                    <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                        <h2 className="text-xl font-extrabold text-primary">Live Pulse</h2>
+                    <div className="p-4 md:p-8 border-b border-slate-50 flex justify-between items-center">
+                        <h2 className="text-lg md:text-xl font-extrabold text-primary">Live Pulse</h2>
                         <div className="flex items-center gap-1.5 bg-green-50 px-2 py-1 rounded-lg">
                             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                             <span className="text-[10px] font-bold text-green-600 uppercase">Live</span>
                         </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 max-h-[500px]">
                         {activities.length > 0 ? activities.map(item => (
                             <ActivityItem
                                 key={item.id}

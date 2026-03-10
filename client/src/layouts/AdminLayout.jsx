@@ -12,14 +12,18 @@ import {
     ChevronRight,
     LogOut,
     UserCircle,
-    Handshake
+    Handshake,
+    Menu,
+    X
 } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function AdminLayout() {
     const staff = JSON.parse(localStorage.getItem('staff')) || { name: 'Admin', role: 'Manager' };
     const navigate = useNavigate();
     const [crmEnabled, setCrmEnabled] = React.useState(true);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
     React.useEffect(() => {
         const fetchSettings = async () => {
@@ -59,10 +63,10 @@ export function AdminLayout() {
                         <SidebarItem to="/admin/maintenance" icon={<SettingsIcon size={18} />} label="Maintenance" />
                         <SidebarItem to="/admin/requests" icon={<ClipboardList size={18} />} label="Live Requests" />
                         {crmEnabled && (
-                            <SidebarItem to="/admin/crm" icon={<Handshake size={18} />} label="CRM Dashboard" />
+                            <SidebarItem to="/admin/crm" icon={<Handshake size={18} />} label="CRM Dashboard" onClick={() => setIsMobileMenuOpen(false)} />
                         )}
-                        <SidebarItem to="/admin/staff" icon={<Users size={18} />} label="Staff Panel" />
-                        <SidebarItem to="/admin/analytics" icon={<BarChart3 size={18} />} label="Analytics" />
+                        <SidebarItem to="/admin/staff" icon={<Users size={18} />} label="Staff Panel" onClick={() => setIsMobileMenuOpen(false)} />
+                        <SidebarItem to="/admin/analytics" icon={<BarChart3 size={18} />} label="Analytics" onClick={() => setIsMobileMenuOpen(false)} />
                     </nav>
                 </div>
 
@@ -70,7 +74,7 @@ export function AdminLayout() {
 
                 <div className="p-4 border-t border-slate-100 space-y-1">
                     <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">System</p>
-                    <SidebarItem to="/admin/settings" icon={<SettingsIcon size={18} />} label="Settings" />
+                    <SidebarItem to="/admin/settings" icon={<SettingsIcon size={18} />} label="Settings" onClick={() => setIsMobileMenuOpen(false)} />
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-all group"
@@ -82,11 +86,78 @@ export function AdminLayout() {
                 </div>
             </aside>
 
+            {/* Mobile Sidebar Overlay */}
+            <AnimatePresence>
+                {isMobileMenuOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 lg:hidden"
+                        />
+                        <motion.aside
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
+                            className="fixed inset-y-0 left-0 w-[280px] bg-white border-r border-slate-200 z-50 flex flex-col lg:hidden"
+                        >
+                            <div className="p-6 pb-8 flex justify-between items-center">
+                                <Logo className="scale-90 origin-left" />
+                                <button
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="px-3 mb-4 flex-1 overflow-y-auto">
+                                <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Main Menu</p>
+                                <nav className="space-y-1">
+                                    <SidebarItem to="/admin" icon={<LayoutDashboard size={18} />} label="Overview" onClick={() => setIsMobileMenuOpen(false)} />
+                                    <SidebarItem to="/admin/rooms" icon={<BedDouble size={18} />} label="Active Rooms" onClick={() => setIsMobileMenuOpen(false)} />
+                                    <SidebarItem to="/admin/maintenance" icon={<SettingsIcon size={18} />} label="Maintenance" onClick={() => setIsMobileMenuOpen(false)} />
+                                    <SidebarItem to="/admin/requests" icon={<ClipboardList size={18} />} label="Live Requests" onClick={() => setIsMobileMenuOpen(false)} />
+                                    {crmEnabled && (
+                                        <SidebarItem to="/admin/crm" icon={<Handshake size={18} />} label="CRM Dashboard" onClick={() => setIsMobileMenuOpen(false)} />
+                                    )}
+                                    <SidebarItem to="/admin/staff" icon={<Users size={18} />} label="Staff Panel" onClick={() => setIsMobileMenuOpen(false)} />
+                                    <SidebarItem to="/admin/analytics" icon={<BarChart3 size={18} />} label="Analytics" onClick={() => setIsMobileMenuOpen(false)} />
+                                </nav>
+                            </div>
+
+                            <div className="p-4 border-t border-slate-100 space-y-1">
+                                <SidebarItem to="/admin/settings" icon={<SettingsIcon size={18} />} label="Settings" onClick={() => setIsMobileMenuOpen(false)} />
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-all"
+                                >
+                                    <LogOut size={18} />
+                                    <span>Sign Out</span>
+                                </button>
+                            </div>
+                        </motion.aside>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Main Area */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-w-0">
                 {/* Top Header */}
-                <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 px-10 flex items-center justify-between sticky top-0 z-40 transition-all">
-                    <div className="relative w-[400px]">
+                <header className="h-16 lg:h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 lg:px-10 flex items-center justify-between sticky top-0 z-40 transition-all gap-4">
+                    <div className="flex items-center gap-3 lg:hidden">
+                        <button
+                            onClick={() => setIsMobileMenuOpen(true)}
+                            className="p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-xl"
+                        >
+                            <Menu size={24} />
+                        </button>
+                    </div>
+
+                    <div className="relative w-full max-w-[400px] hidden md:block">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                         <input
                             type="text"
@@ -105,15 +176,15 @@ export function AdminLayout() {
                             <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-accent rounded-full border-2 border-white shadow-sm group-hover:scale-110 transition-transform"></span>
                         </button>
 
-                        <div className="h-8 w-px bg-slate-100"></div>
+                        <div className="h-8 w-px bg-slate-100 hidden sm:block"></div>
 
-                        <div className="flex items-center gap-4 group cursor-pointer">
-                            <div className="text-right">
+                        <div className="flex items-center gap-3 sm:gap-4 group cursor-pointer">
+                            <div className="text-right hidden sm:block">
                                 <p className="text-sm font-extrabold text-primary group-hover:text-accent transition-colors">{staff.name}</p>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight">{staff.role}</p>
                             </div>
-                            <div className="relative">
-                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform overflow-hidden font-bold text-white text-sm">
+                            <div className="relative shrink-0">
+                                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform overflow-hidden font-bold text-white text-xs sm:text-sm">
                                     {getInitials(staff.name)}
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
@@ -123,7 +194,7 @@ export function AdminLayout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="p-10 flex-1 overflow-y-auto bg-secondary/30">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/30 p-4 lg:p-10">
                     <div className="max-w-7xl mx-auto">
                         <Outlet />
                     </div>
@@ -133,11 +204,12 @@ export function AdminLayout() {
     );
 }
 
-function SidebarItem({ to, icon, label }) {
+function SidebarItem({ to, icon, label, onClick }) {
     return (
         <NavLink
             to={to}
             end={to === '/admin'}
+            onClick={onClick}
             className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group border border-transparent ${isActive
                     ? 'bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]'
