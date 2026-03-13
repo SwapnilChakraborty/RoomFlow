@@ -138,7 +138,7 @@ function initializeMockData() {
         _id: `mock_room_${101 + i}`,
         roomNumber: (101 + i).toString(),
         type: i % 5 === 0 ? 'Presidential Suite' : i % 3 === 0 ? 'Junior Suite' : 'Deluxe Room',
-        status: i === 2 ? 'Occupied' : i === 5 ? 'Cleaning' : 'Ready',
+        status: i === 2 ? 'Occupied' : 'Ready',
         floor: Math.floor((101 + i) / 100),
         lastCleaned: '2h ago',
         currentGuest: i === 2 ? { _id: 'mock_cust_1', name: 'John Anderson' } : null
@@ -343,14 +343,34 @@ app.post('/api/checkout', async (req, res) => {
 
         io.emit('room_status_changed', { roomNumber, status: 'Cleaning' });
         io.emit('guest_checkout', { roomNumber });
-        io.emit('admin_activity', {
-            id: `clean_${roomNumber}`,
-            room: roomNumber,
+        // Create a persistent service request for housekeeping
+        const housekeepingReq = {
+            roomNumber: roomNumber,
             type: 'housekeeping',
             details: 'Housekeeping Required',
-            time: new Date(),
+            priority: 'High',
             status: 'Pending',
-            priority: 'High'
+            createdAt: new Date()
+        };
+
+        if (isMockMode) {
+            housekeepingReq._id = 'mock_srv_' + Date.now();
+            mockServiceRequests.push(housekeepingReq);
+        } else {
+            const newRequest = new ServiceRequest(housekeepingReq);
+            await newRequest.save();
+            housekeepingReq.id = newRequest._id.toString();
+        }
+
+        io.emit('admin_activity', {
+            id: housekeepingReq.id || housekeepingReq._id,
+            room: roomNumber,
+            type: 'service',
+            details: housekeepingReq.details,
+            priority: housekeepingReq.priority,
+            status: housekeepingReq.status,
+            time: housekeepingReq.createdAt,
+            serviceType: housekeepingReq.type
         });
         broadcastStats();
 
@@ -400,14 +420,33 @@ app.post('/api/update-room-status', async (req, res) => {
 
         io.emit('room_status_changed', { roomNumber, status });
         if (status === 'Cleaning') {
-            io.emit('admin_activity', {
-                id: `clean_${roomNumber}`,
-                room: roomNumber,
+            const housekeepingReq = {
+                roomNumber: roomNumber,
                 type: 'housekeeping',
                 details: 'Housekeeping Required',
-                time: new Date(),
+                priority: 'High',
                 status: 'Pending',
-                priority: 'High'
+                createdAt: new Date()
+            };
+
+            if (isMockMode) {
+                housekeepingReq._id = 'mock_srv_' + Date.now();
+                mockServiceRequests.push(housekeepingReq);
+            } else {
+                const newRequest = new ServiceRequest(housekeepingReq);
+                await newRequest.save();
+                housekeepingReq.id = newRequest._id.toString();
+            }
+
+            io.emit('admin_activity', {
+                id: housekeepingReq.id || housekeepingReq._id,
+                room: roomNumber,
+                type: 'service',
+                details: housekeepingReq.details,
+                priority: housekeepingReq.priority,
+                status: housekeepingReq.status,
+                time: housekeepingReq.createdAt,
+                serviceType: housekeepingReq.type
             });
         }
         broadcastStats();
@@ -538,15 +577,6 @@ app.get('/api/activity', async (req, res) => {
                     total: o.total
                 };
             }),
-            ...cleaningRooms.map(r => ({
-                id: `housekeeping_${r.roomNumber}`,
-                room: r.roomNumber,
-                details: 'Regular Cleaning Required',
-                time: r.lastCleanedAt || new Date(new Date().setHours(8, 0, 0, 0)), 
-                type: 'housekeeping',
-                status: 'Pending',
-                priority: 'Normal'
-            }))
         ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 15);
 
         res.json(activities);

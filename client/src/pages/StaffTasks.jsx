@@ -64,7 +64,7 @@ export function StaffTasks() {
         socket.on('admin_activity', (data) => {
             playSound(data.type);
             setTasks(prev => {
-                const standardizedId = data.id || `housekeeping_${data.room}`;
+                const standardizedId = data.id;
                 const exists = prev.find(t => t.id === standardizedId);
                 if (exists) return prev;
                 return [{
