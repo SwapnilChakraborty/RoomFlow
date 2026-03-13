@@ -149,7 +149,9 @@ function initializeMockData() {
             _id: 'mock_cust_1',
             customerID: 'CUST8842',
             name: 'John Anderson',
-            room: mockRooms[2]._id // Store ID only to avoid circular reference
+            room: mockRooms[2]._id, // Store ID only to avoid circular reference
+            checkIn: new Date(Date.now() - 86400000), // Yesterday
+            checkOut: new Date(Date.now() + 86400000 * 3) // 3 days from now
         };
         mockCustomers.push(guest);
         mockRooms[2].currentGuest = guest;
