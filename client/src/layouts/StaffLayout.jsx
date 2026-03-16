@@ -9,6 +9,7 @@ import {
     Settings,
     Search
 } from 'lucide-react';
+import { Logo } from '../components/ui/Logo';
 
 export function StaffLayout() {
     const navigate = useNavigate();
@@ -18,27 +19,22 @@ export function StaffLayout() {
         <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col max-w-md mx-auto relative border-x border-slate-200 shadow-xl font-sans">
             {/* Top Header */}
             <header className="sticky top-0 z-50 bg-white border-b border-slate-100 px-6 py-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-slate-50 shadow-sm flex-shrink-0 bg-slate-100">
-                        <img
-                            src="https://images.unsplash.com/photo-1559839734-2b71f1536783?q=80&w=200&auto=format&fit=crop"
-                            alt="Profile"
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
+                <div className="flex items-center gap-3">
+                    <Logo showText={false} className="scale-75 -ml-2" />
                     <div>
-                        <h1 className="font-bold text-lg leading-tight text-slate-900">Orders Dashboard</h1>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            {staff.role.toUpperCase()} • STATION 1
+                        <h1 className="font-bold text-base leading-tight text-slate-900">Orders</h1>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            STATION 1
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button className="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-primary rounded-xl transition-all border border-slate-100">
-                        <Bell size={20} />
+
+                <div className="flex items-center gap-2">
+                    <button className="w-9 h-9 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-primary rounded-xl transition-all border border-slate-100">
+                        <Bell size={18} />
                     </button>
-                    <button className="w-10 h-10 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-primary rounded-xl transition-all border border-slate-100">
-                        <Settings size={20} />
+                    <button className="w-9 h-9 flex items-center justify-center bg-slate-50 text-slate-400 hover:text-primary rounded-xl transition-all border border-slate-100">
+                        <Settings size={18} />
                     </button>
                 </div>
             </header>
