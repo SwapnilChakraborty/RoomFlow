@@ -5,32 +5,67 @@ const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
+const allowedOrigins = [
+    'https://hotel-mangment-ten.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5001'
+];
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
+        origin: function (origin, callback) {
+            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
+        methods: ["GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"],
+        credentials: true
     }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ["GET", "POST", "PATCH", "DELETE", "PUT", "OPTIONS"],
+    credentials: true
+}));
 app.use(express.json());
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/roomflow';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+    console.error('CRITICAL: MONGODB_URI is not defined in environment variables.');
+    process.exit(1);
+}
 
 let isMockMode = false;
-mongoose.set('bufferCommands', false); // Fail fast, don't buffer if disconnected
+const ALLOW_MOCK_MODE = process.env.ALLOW_MOCK_MODE === 'true';
+
+mongoose.set('bufferCommands', false);
 
 mongoose.connect(MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => {
         console.error('MongoDB connection error:', err.message);
-        console.warn('Proceeding in Mock Mode (Local Data Only)');
-        isMockMode = true;
-        initializeMockData();
+        if (ALLOW_MOCK_MODE) {
+            console.warn('Proceeding in Mock Mode (Local Data Only)');
+            isMockMode = true;
+            initializeMockData();
+        } else {
+            console.error('Mock Mode is disabled. Shutting down...');
+            process.exit(1);
+        }
     });
 
 // Schemas
