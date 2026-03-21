@@ -14,13 +14,14 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { AreaChart } from '../components/admin/AreaChart';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function Analytics() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${API_URL}/api/analytics`)
+        secureFetch(`${API_URL}/api/analytics`)
             .then(res => res.json())
             .then(json => {
                 setData(json);

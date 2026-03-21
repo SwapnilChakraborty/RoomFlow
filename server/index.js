@@ -4,6 +4,9 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const dns = require('dns');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // Override DNS for MongoDB Atlas resolution
@@ -17,6 +20,23 @@ const allowedOrigins = [
 ];
 
 const app = express();
+
+// Rate Limiting
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per 15 mins
+    message: { error: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 15, // Limit login attempts to 15 per 15 mins
+    message: { error: 'Too many login attempts, please try again after 15 minutes.' }
+});
+
+app.use('/api/', globalLimiter);
+app.use('/api/staff-login', authLimiter);
+app.use('/api/customer-login', authLimiter);
 const isMockMode = false; // Disable mock mode for production
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -92,6 +112,61 @@ async function ensureAdminExists() {
 }
 
 // Schemas
+const StaffSchema = new mongoose.Schema({
+    username: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+    name: { type: String, required: true },
+    role: { type: String, default: 'Staff', enum: ['Admin', 'Staff'] },
+    shiftStart: { type: String, default: '09:00' }, // 24h format
+    shiftEnd: { type: String, default: '18:00' },
+    weeklyOff: { type: String, default: 'Sunday' },
+    status: { type: String, default: 'Off Duty', enum: ['Active', 'On Break', 'Off Duty'] },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Hash password before saving
+StaffSchema.pre('save', async function() {
+    if (!this.isModified('password')) return;
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    } catch (err) {
+        throw err;
+    }
+});
+
+// Method to check password
+StaffSchema.methods.comparePassword = async function(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+};
+
+const Staff = mongoose.model('Staff', StaffSchema);
+
+// Middleware for authentication
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_change_me';
+
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid or expired token.' });
+        req.user = user;
+        next();
+    });
+}
+
+function authorizeRole(role) {
+    return (req, res, next) => {
+        if (req.user.role !== role && req.user.role !== 'Admin') {
+            return res.status(403).json({ error: 'Forbidden. Insufficient permissions.' });
+        }
+        next();
+    };
+}
+
 const RoomSchema = new mongoose.Schema({
     roomNumber: { type: String, unique: true, required: true },
     type: { type: String, required: true },
@@ -113,20 +188,6 @@ const CustomerSchema = new mongoose.Schema({
 });
 
 const Customer = mongoose.model('Customer', CustomerSchema);
-
-const StaffSchema = new mongoose.Schema({
-    username: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-    name: { type: String, required: true },
-    role: { type: String, default: 'Staff', enum: ['Admin', 'Staff'] },
-    shiftStart: { type: String, default: '09:00' }, // 24h format
-    shiftEnd: { type: String, default: '18:00' },
-    weeklyOff: { type: String, default: 'Sunday' },
-    status: { type: String, default: 'Off Duty', enum: ['Active', 'On Break', 'Off Duty'] },
-    createdAt: { type: Date, default: Date.now }
-});
-
-const Staff = mongoose.model('Staff', StaffSchema);
 
 
 const OrderSchema = new mongoose.Schema({
@@ -242,6 +303,16 @@ app.post('/api/orders', async (req, res) => {
             time: order.createdAt
         });
 
+        // Live Notification
+        io.emit('new_notification', {
+            id: Date.now(),
+            role: 'admin',
+            title: 'New Room Order',
+            message: `Room ${order.roomNumber}: ${order.items.length} items ordered`,
+            type: 'order',
+            time: new Date()
+        });
+
         res.json({ message: 'Order placed successfully', order });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -263,6 +334,16 @@ app.post('/api/service-requests', async (req, res) => {
             status: request.status,
             time: request.createdAt,
             serviceType: request.type
+        });
+
+        // Live Notification
+        io.emit('new_notification', {
+            id: Date.now(),
+            role: 'admin',
+            title: 'New Service Request',
+            message: `Room ${request.roomNumber}: ${request.type.charAt(0).toUpperCase() + request.type.slice(1)} requested`,
+            type: 'service',
+            time: new Date()
         });
 
         res.json({ message: 'Request submitted successfully', request });
@@ -292,7 +373,7 @@ app.get('/api/rooms', async (req, res) => {
     }
 });
 
-app.post('/api/rooms', async (req, res) => {
+app.post('/api/rooms', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         const { roomNumber, type, floor } = req.body;
         
@@ -319,7 +400,7 @@ app.post('/api/rooms', async (req, res) => {
     }
 });
 
-app.delete('/api/rooms/:id', async (req, res) => {
+app.delete('/api/rooms/:id', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         const room = await Room.findById(req.params.id);
         if (!room) return res.status(404).json({ error: 'Room not found' });
@@ -340,7 +421,7 @@ app.delete('/api/rooms/:id', async (req, res) => {
 });
 
 // Allot Room Route
-app.post('/api/allot-room', async (req, res) => {
+app.post('/api/allot-room', authenticateToken, async (req, res) => {
     const { roomNumber, guestName, phone, checkIn, checkOut } = req.body;
     try {
         const room = await Room.findOne({ roomNumber });
@@ -365,7 +446,7 @@ app.post('/api/allot-room', async (req, res) => {
 });
 
 // Check-out Route
-app.post('/api/checkout', async (req, res) => {
+app.post('/api/checkout', authenticateToken, async (req, res) => {
     const { roomNumber } = req.body;
     try {
         const room = await Room.findOne({ roomNumber }).populate('currentGuest');
@@ -406,6 +487,17 @@ app.post('/api/checkout', async (req, res) => {
             time: housekeepingReq.createdAt,
             serviceType: housekeepingReq.type
         });
+
+        // Live Notification for Admin & Staff
+        io.emit('new_notification', {
+            id: Date.now(),
+            role: 'admin',
+            title: 'New Service Request',
+            message: `Room ${roomNumber}: Housekeeping Required`,
+            type: 'service',
+            time: new Date()
+        });
+
         broadcastStats();
 
         res.json({ message: 'Checked out successfully.', room });
@@ -415,7 +507,7 @@ app.post('/api/checkout', async (req, res) => {
 });
 
 // Update Room Status Route
-app.post('/api/update-room-status', async (req, res) => {
+app.post('/api/update-room-status', authenticateToken, async (req, res) => {
     const { roomNumber, status } = req.body;
     try {
         const room = await Room.findOne({ roomNumber });
@@ -447,6 +539,16 @@ app.post('/api/update-room-status', async (req, res) => {
                 time: housekeepingReq.createdAt,
                 serviceType: housekeepingReq.type
             });
+
+            // Live Notification for Admin & Staff
+            io.emit('new_notification', {
+                id: Date.now(),
+                role: 'admin',
+                title: 'New Service Request',
+                message: `Room ${roomNumber}: Housekeeping Required (Auto)`,
+                type: 'service',
+                time: new Date()
+            });
         }
         broadcastStats();
 
@@ -471,7 +573,7 @@ app.post('/api/customer-login', async (req, res) => {
 });
 
 // Stats Route
-app.get('/api/stats', async (req, res) => {
+app.get('/api/stats', authenticateToken, async (req, res) => {
     try {
         const totalRooms = await Room.countDocuments();
         const occupiedRooms = await Room.countDocuments({ status: 'Occupied' });
@@ -495,22 +597,33 @@ app.get('/api/stats', async (req, res) => {
 // Staff Login Route
 app.post('/api/staff-login', async (req, res) => {
     const { username, password } = req.body;
-    console.log(`Login attempt for username: ${username}`);
-
     try {
-        const staff = await Staff.findOne({ username, password });
+        const staff = await Staff.findOne({ username });
 
         if (!staff) {
-            console.warn(`Invalid credentials for: ${username}`);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        console.log(`Login successful for: ${username} (${staff.role})`);
+        const isMatch = await staff.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Issue JWT
+        const token = jwt.sign(
+            { id: staff._id, username: staff.username, role: staff.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
         res.json({
-            id: staff._id,
-            username: staff.username,
-            name: staff.name,
-            role: staff.role
+            token,
+            user: {
+                id: staff._id,
+                username: staff.username,
+                name: staff.name,
+                role: staff.role
+            }
         });
     } catch (err) {
         console.error('Staff Login Error:', err);
@@ -518,8 +631,8 @@ app.post('/api/staff-login', async (req, res) => {
     }
 });
 
-// GET all staff (Admin only ideally, but keeping it simple for MVP)
-app.get('/api/staff', async (req, res) => {
+// Staff Routes
+app.get('/api/staff', authenticateToken, async (req, res) => {
     try {
         const staff = await Staff.find({}, '-password').sort({ name: 1 });
         res.json(staff);
@@ -528,9 +641,44 @@ app.get('/api/staff', async (req, res) => {
     }
 });
 
+app.post('/api/staff', authenticateToken, authorizeRole('Admin'), async (req, res) => {
+    const { username, password, name, role, email, phone } = req.body;
+    try {
+        const existingStaff = await Staff.findOne({ username });
+        if (existingStaff) {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
+
+        const staff = new Staff({
+            username,
+            password, // Hook will handle hashing
+            name,
+            role: role || 'Staff',
+            email,
+            phone
+        });
+
+        await staff.save();
+        
+        // Emit event for real-time updates
+        io.emit('staff_added', { 
+            id: staff._id, 
+            name: staff.name, 
+            role: staff.role 
+        });
+
+        res.status(201).json({ 
+            message: 'Staff created successfully', 
+            staff: { id: staff._id, username: staff.username, name: staff.name, role: staff.role } 
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 // Performance Stats for Admin
-app.get('/api/admin/staff-performance-stats', async (req, res) => {
+app.get('/api/admin/staff-performance-stats', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         const staffList = await Staff.find({}, 'name role');
         const stats = await Promise.all(staffList.map(async (s) => {
@@ -577,7 +725,7 @@ app.get('/api/admin/staff-performance-stats', async (req, res) => {
 });
 
 // Activity Feed Route
-app.get('/api/activity', async (req, res) => {
+app.get('/api/activity', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         const serviceRequests = await ServiceRequest.find().sort({ createdAt: -1 }).limit(10).lean();
         const orders = await Order.find().sort({ createdAt: -1 }).limit(10).lean();
@@ -615,29 +763,84 @@ app.get('/api/activity', async (req, res) => {
     }
 });
 
+// Live Requests Route (all active items)
+app.get('/api/requests/live', authenticateToken, authorizeRole('Admin'), async (req, res) => {
+    try {
+        const activeStatuses = ['Pending', 'In Progress', 'Preparing'];
+        const serviceRequests = await ServiceRequest.find({ status: { $in: activeStatuses } }).sort({ createdAt: -1 }).lean();
+        const orders = await Order.find({ status: { $in: activeStatuses } }).sort({ createdAt: -1 }).lean();
+
+        const requests = [
+            ...serviceRequests.map(r => ({
+                id: r._id.toString(),
+                room: r.roomNumber,
+                details: r.details,
+                time: r.createdAt,
+                type: 'service',
+                status: r.status,
+                priority: r.priority,
+                serviceType: r.type
+            })),
+            ...orders.map(o => {
+                const orderText = o.items && o.items.length > 0
+                    ? o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')
+                    : `Order #${o._id.toString().substring(19)}`;
+                return {
+                    id: o._id.toString(),
+                    room: o.roomNumber,
+                    details: orderText,
+                    time: o.createdAt,
+                    type: 'order',
+                    status: o.status,
+                    total: o.total
+                };
+            }),
+        ].sort((a, b) => new Date(b.time) - new Date(a.time));
+
+        res.json(requests);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Guest Activity Route
 app.get('/api/guest-activity/:roomNumber', async (req, res) => {
     const { roomNumber } = req.params;
     try {
-        const serviceRequests = await ServiceRequest.find({ roomNumber }).lean();
-        const orders = await Order.find({ roomNumber }).lean();
+        const activeStatuses = ['Pending', 'In Progress', 'Preparing'];
+        const serviceRequests = await ServiceRequest.find({ 
+            roomNumber, 
+            status: { $in: activeStatuses } 
+        }).sort({ createdAt: -1 }).limit(10).lean();
+
+        const orders = await Order.find({ 
+            roomNumber, 
+            status: { $in: activeStatuses } 
+        }).sort({ createdAt: -1 }).limit(10).lean();
 
         const activities = [
             ...serviceRequests.map(r => ({
                 id: r._id.toString(),
                 text: `${r.type.charAt(0).toUpperCase() + r.type.slice(1)} Request`,
+                details: r.details,
                 time: r.createdAt,
                 type: 'service',
                 status: r.status
             })),
-            ...orders.map(o => ({
-                id: o._id.toString(),
-                text: `Order #${o._id.toString().substr(-5)}`,
-                time: o.createdAt,
-                type: 'order',
-                status: o.status
-            }))
-        ].sort((a, b) => new Date(b.time) - new Date(a.time));
+            ...orders.map(o => {
+                const itemSummary = o.items && o.items.length > 0 
+                    ? o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')
+                    : `Order #${o._id.toString().substr(-5).toUpperCase()}`;
+                
+                return {
+                    id: o._id.toString(),
+                    text: itemSummary,
+                    time: o.createdAt,
+                    type: 'order',
+                    status: o.status
+                };
+            })
+        ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 15);
 
         res.json(activities);
     } catch (err) {
@@ -646,7 +849,7 @@ app.get('/api/guest-activity/:roomNumber', async (req, res) => {
 });
 
 // Maintenance Tasks Route
-app.get('/api/maintenance', async (req, res) => {
+app.get('/api/maintenance', authenticateToken, async (req, res) => {
     try {
         // Placeholder for real DB implementation if needed
         res.json([]);
@@ -656,7 +859,7 @@ app.get('/api/maintenance', async (req, res) => {
 });
 
 // Analytics Route
-app.get('/api/analytics', async (req, res) => {
+app.get('/api/analytics', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         const totalServiceRequests = await ServiceRequest.countDocuments();
         const completedServiceRequests = await ServiceRequest.countDocuments({ status: 'Completed' });
@@ -704,12 +907,8 @@ app.get('/api/analytics', async (req, res) => {
     }
 });
 
-// Analytics Routes
-app.get('/api/analytics', async (req, res) => {
-    // ... existing analytics code ...
-});
 
-app.get('/api/staff-performance/:id', async (req, res) => {
+app.get('/api/staff-performance/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const mongoose = require('mongoose');
@@ -779,7 +978,7 @@ app.get('/api/staff-performance/:id', async (req, res) => {
 });
 
 // CRM Routes
-app.get('/api/crm/leads', async (req, res) => {
+app.get('/api/crm/leads', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         const leads = await Lead.find().sort({ createdAt: -1 });
         res.json(leads);
@@ -788,7 +987,7 @@ app.get('/api/crm/leads', async (req, res) => {
     }
 });
 
-app.post('/api/crm/leads', async (req, res) => {
+app.post('/api/crm/leads', authenticateToken, async (req, res) => {
     try {
         const lead = new Lead(req.body);
         await lead.save();
@@ -798,7 +997,7 @@ app.post('/api/crm/leads', async (req, res) => {
     }
 });
 
-app.patch('/api/crm/leads/:id', async (req, res) => {
+app.patch('/api/crm/leads/:id', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         const { id } = req.params;
         let lead;
@@ -817,7 +1016,7 @@ app.patch('/api/crm/leads/:id', async (req, res) => {
 });
 
 // Review Routes
-app.get('/api/reviews', async (req, res) => {
+app.get('/api/reviews', authenticateToken, async (req, res) => {
     try {
         if (isMockMode) return res.json(mockReviews);
         const reviews = await Review.find().sort({ createdAt: -1 });
@@ -888,7 +1087,7 @@ app.get('/api/settings', async (req, res) => {
 });
 
 // Chat Routes
-app.get('/api/chat/:roomNumber', async (req, res) => {
+app.get('/api/chat/:roomNumber', authenticateToken, async (req, res) => {
     const { roomNumber } = req.params;
     try {
         if (isMockMode) {
@@ -902,7 +1101,7 @@ app.get('/api/chat/:roomNumber', async (req, res) => {
     }
 });
 
-app.post('/api/settings', async (req, res) => {
+app.post('/api/settings', authenticateToken, authorizeRole('Admin'), async (req, res) => {
     try {
         if (isMockMode) {
             mockSettings = { ...mockSettings, ...req.body };
@@ -921,8 +1120,22 @@ app.post('/api/settings', async (req, res) => {
     }
 });
 
+// Socket.io Authentication Middleware
+io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+        return next(new Error('Authentication error: No token provided'));
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) return next(new Error('Authentication error: Invalid token'));
+        socket.user = decoded;
+        next();
+    });
+});
+
 io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+    console.log(`User connected: ${socket.id} (User: ${socket.user.username})`);
 
     socket.on('join_room', (roomNumber) => {
         socket.join(`room_${roomNumber}`);
@@ -983,6 +1196,28 @@ io.on('connection', (socket) => {
 
         io.to(`room_${roomNumber}`).emit('status_updated', { requestId, status });
         io.emit('admin_activity_update', { requestId, status });
+
+        // Push notification to guest
+        io.to(`room_${roomNumber}`).emit('new_notification', {
+            id: Date.now(),
+            role: 'guest',
+            title: 'Request Update',
+            message: `Your request is now: ${status}`,
+            type: 'status',
+            time: new Date()
+        });
+
+        // Push notification to admin/staff if relevant (e.g. if completed)
+        if (status === 'Pending' || status === 'Completed') {
+            io.emit('new_notification', {
+                id: Date.now(),
+                role: 'admin',
+                title: 'Task Update',
+                message: `Room ${roomNumber} task marked as ${status}`,
+                type: 'status',
+                time: new Date()
+            });
+        }
     });
 
     // Chat Events
@@ -1014,6 +1249,16 @@ io.on('connection', (socket) => {
             details: text,
             time: messageData.timestamp
         });
+
+        // Live Notification for Admin
+        io.emit('new_notification', {
+            id: Date.now(),
+            role: 'admin',
+            title: 'New Message',
+            message: `Room ${roomNumber}: ${text.substring(0, 30)}${text.length > 30 ? '...' : ''}`,
+            type: 'service',
+            time: new Date()
+        });
     });
 
     socket.on('admin_reply_message', async (data) => {
@@ -1037,6 +1282,16 @@ io.on('connection', (socket) => {
         // Emit to the specific guest room and global admin (to sync across admin tabs)
         io.to(`room_${roomNumber}`).emit('new_message', messageData);
         io.emit('admin_new_message', messageData);
+
+        // Live Notification for Guest
+        io.to(`room_${roomNumber}`).emit('new_notification', {
+            id: Date.now(),
+            role: 'guest',
+            title: 'Message from Reception',
+            message: text.substring(0, 50),
+            type: 'status',
+            time: new Date()
+        });
     });
 
     socket.on('disconnect', () => {

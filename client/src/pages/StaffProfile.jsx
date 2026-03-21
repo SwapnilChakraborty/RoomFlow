@@ -12,6 +12,7 @@ export function StaffProfile() {
 
     const handleLogout = () => {
         localStorage.removeItem('staff');
+        localStorage.removeItem('staff_token');
         navigate('/admin/login');
     };
 

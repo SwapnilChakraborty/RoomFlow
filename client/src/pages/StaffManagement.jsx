@@ -3,7 +3,10 @@ import { Users, Clock, Star, MoreVertical, Loader2, Search } from 'lucide-react'
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 
 export default function StaffManagement() {
     const [staff, setStaff] = useState([]);
@@ -19,8 +22,8 @@ export default function StaffManagement() {
         try {
             setLoading(true);
             const [staffRes, perfRes] = await Promise.all([
-                fetch(`${API_URL}/api/staff`),
-                fetch(`${API_URL}/api/admin/staff-performance-stats`)
+                secureFetch(`${API_URL}/api/staff`),
+                secureFetch(`${API_URL}/api/admin/staff-performance-stats`)
             ]);
 
             const [staffData, perfData] = await Promise.all([
@@ -62,6 +65,14 @@ export default function StaffManagement() {
                         Performance & Shifts
                     </p>
                 </div>
+                
+                <Link 
+                    to="/admin/staff/register"
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-4 rounded-2xl shadow-xl shadow-blue-100 transition-all hover:scale-105 active:scale-95"
+                >
+                    <UserPlus size={20} />
+                    Add New Staff
+                </Link>
             </div>
 
             {/* Stats Overview */}
@@ -86,7 +97,7 @@ export default function StaffManagement() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input 
                         type="text" 
-                        placeholder={`Search staff in ${view}...`}
+                        placeholder="Search staff members..."
                         className="w-full bg-slate-50 border-none rounded-2xl py-3 pl-12 pr-4 font-bold text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}

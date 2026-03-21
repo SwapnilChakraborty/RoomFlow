@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const dns = require('dns');
 require('dotenv').config();
 
@@ -13,11 +14,23 @@ const StaffSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+// Hash password before saving
+StaffSchema.pre('save', async function() {
+    if (!this.isModified('password')) return;
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    } catch (err) {
+        throw err;
+    }
+});
+
 const Staff = mongoose.model('Staff', StaffSchema);
 
 const seedStaff = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/roomflow');
+        console.log('Connecting to MongoDB: ' + (process.env.MONGODB_URI ? 'URI found' : 'URI missing'));
+        await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
 
         // Clear existing staff
@@ -25,20 +38,23 @@ const seedStaff = async () => {
 
         const admin = new Staff({
             username: process.env.ADMIN_USERNAME || 'admin',
-            password: process.env.ADMIN_PASSWORD || 'password123',
+            password: process.env.ADMIN_PASSWORD || 'Password123',
             name: 'Alex Rivera',
             role: 'Admin'
         });
 
         const staff1 = new Staff({
             username: process.env.STAFF_USERNAME || 'staff1',
-            password: process.env.STAFF_PASSWORD || 'password123',
+            password: process.env.STAFF_PASSWORD || 'Password123',
             name: 'John Doe',
             role: 'Staff'
         });
 
-        await Staff.insertMany([admin, staff1]);
-        console.log('Staff seeded successfully!');
+        // Use .save() to trigger the pre-save hook for hashing
+        await admin.save();
+        await staff1.save();
+        
+        console.log('Staff seeded successfully with hashed passwords!');
         process.exit();
     } catch (err) {
         console.error('Error seeding staff:', err);

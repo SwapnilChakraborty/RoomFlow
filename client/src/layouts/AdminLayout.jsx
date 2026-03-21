@@ -23,6 +23,8 @@ import {
 import { Logo } from '../components/ui/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from '../config/api';
+import { useSocket } from '../context/SocketContext';
+import { NotificationDropdown } from '../components/ui/NotificationDropdown';
 
 const API = () => API_URL;
 
@@ -104,6 +106,35 @@ export function AdminLayout() {
     const inputRef = useRef(null);
     const { results, loading } = useGlobalSearch(searchQuery);
     const hasResults = results.pages.length + results.rooms.length + results.staff.length > 0;
+    const { socket } = useSocket();
+    const [notifications, setNotifications] = useState([]);
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    const addNotification = (notif) => {
+        setNotifications(prev => [
+            { ...notif, read: false, id: Date.now() + Math.random() },
+            ...prev
+        ].slice(0, 20));
+    };
+
+    const handleClearAll = () => {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    };
+
+    const handleRead = (id) => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    };
+
+    useEffect(() => {
+        if (!socket) return;
+        socket.on('new_notification', (notif) => {
+            if (notif.role === 'admin') {
+                addNotification(notif);
+            }
+        });
+        return () => socket.off('new_notification');
+    }, [socket]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -186,6 +217,16 @@ export function AdminLayout() {
                 <div className="p-4 border-t border-slate-100 space-y-1">
                     <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">System</p>
                     <SidebarItem to="/admin/settings" icon={<SettingsIcon size={18} />} label="Settings" />
+                    
+                    {/* Unique System ID */}
+                    <div className="mt-4 px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">System Instance</p>
+                        <p className="text-[10px] font-bold text-primary mt-1 flex items-center gap-1.5">
+                            <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
+                            RF-PRO-2026-X792
+                        </p>
+                    </div>
+
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-all group"
@@ -371,10 +412,12 @@ export function AdminLayout() {
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <button className="relative p-2.5 text-slate-400 hover:text-primary hover:bg-slate-50 rounded-xl transition-all group">
-                            <Bell size={20} />
-                            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-accent rounded-full border-2 border-white shadow-sm group-hover:scale-110 transition-transform" />
-                        </button>
+                        <NotificationDropdown 
+                            notifications={notifications}
+                            unreadCount={unreadCount}
+                            onClearAll={handleClearAll}
+                            onRead={handleRead}
+                        />
 
                         <div className="h-8 w-px bg-slate-100 hidden sm:block" />
 

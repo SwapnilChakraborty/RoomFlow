@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
     TrendingUp,
     Users,
@@ -17,22 +18,29 @@ import { StatWidget } from '../components/ui/StatWidget';
 import { AreaChart } from '../components/admin/AreaChart';
 import { useSocket } from '../context/SocketContext';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function AdminOverview() {
     const [stats, setStats] = useState(null);
     const [activities, setActivities] = useState([]);
+    const [hotelName, setHotelName] = useState('Grand Hyatt');
     const [loading, setLoading] = useState(true);
     const { socket } = useSocket();
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [statsRes, activityRes] = await Promise.all([
-                    fetch(`${API_URL}/api/stats`),
-                    fetch(`${API_URL}/api/activity`)
+                const [statsRes, activityRes, settingsRes] = await Promise.all([
+                    secureFetch(`${API_URL}/api/stats`),
+                    secureFetch(`${API_URL}/api/activity`),
+                    secureFetch(`${API_URL}/api/settings`)
                 ]);
                 const statsData = await statsRes.json();
                 const activityData = await activityRes.json();
+                const settingsData = await settingsRes.json();
+
+                if (settingsData.hotelName) setHotelName(settingsData.hotelName);
+                
                 setStats(statsData);
                 setActivities(activityData.map(act => ({
                     ...act,
@@ -95,8 +103,11 @@ export function AdminOverview() {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Executive Dashboard</h1>
-                    <p className="text-sm md:text-base text-slate-500 font-medium mt-1">Property overview for <span className="text-primary font-bold">Grand Hyatt RoomFlow</span></p>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight text-white/110">Executive Dashboard</h1>
+                    <p className="text-sm md:text-base text-slate-500 font-medium mt-1 inline-flex items-center gap-2">
+                        Property oversight for <span className="text-primary font-black px-2 py-0.5 bg-primary/5 rounded-lg">{hotelName} RF-PRO</span>
+                        <span className="text-[10px] font-black text-slate-300 border border-slate-200 px-2 py-0.5 rounded-md uppercase tracking-widest">Instance: X792</span>
+                    </p>
                 </div>
                 <div className="flex flex-wrap gap-2 md:gap-3 w-full md:w-auto">
                     <Button variant="outline" size="md" className="gap-2 flex-1 md:flex-none justify-center">
@@ -141,6 +152,35 @@ export function AdminOverview() {
                     icon={DollarSign}
                 />
             </div>
+
+            {/* Proprietary System Integrity Banner */}
+            <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-primary to-blue-900 rounded-3xl p-6 text-white shadow-2xl shadow-primary/20 relative overflow-hidden group"
+            >
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 -translate-y-1/2 translate-x-1/2 rounded-full group-hover:scale-110 transition-transform duration-1000" />
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex items-center gap-6 text-center md:text-left">
+                        <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
+                            <Star className="text-accent animate-pulse" size={32} fill="currentColor" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black tracking-tight">Verified Proprietary Instance</h3>
+                            <p className="text-white/60 text-xs font-bold uppercase tracking-[0.2em] mt-1">System Core: RoomFlow Ultra v4.2.0-ULTRA</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+                        <div className="px-6 py-3 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10 text-center w-full md:w-auto">
+                            <p className="text-[9px] font-black text-white/40 uppercase tracking-widest leading-none">Integrity Status</p>
+                            <p className="text-sm font-black text-accent mt-1 tracking-widest">100% SECURE</p>
+                        </div>
+                        <div className="px-6 py-3 bg-accent text-primary rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-accent/20 cursor-default hover:scale-105 transition-transform">
+                            License Active
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 {/* Analytics Chart */}

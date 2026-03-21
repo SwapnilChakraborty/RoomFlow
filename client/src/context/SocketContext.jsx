@@ -12,7 +12,10 @@ export function SocketProvider({ children }) {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        const newSocket = io(SOCKET_URL);
+        const token = localStorage.getItem('staff_token');
+        const newSocket = io(SOCKET_URL, {
+            auth: { token }
+        });
         setSocket(newSocket);
 
         newSocket.on('connect', () => {

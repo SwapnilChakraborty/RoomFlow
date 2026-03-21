@@ -11,6 +11,7 @@ import {
     LayoutDashboard
 } from 'lucide-react';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function Settings() {
     const [settings, setSettings] = useState({
@@ -33,7 +34,7 @@ export function Settings() {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/settings`);
+            const res = await secureFetch(`${API_URL}/api/settings`);
             const data = await res.json();
             setSettings(prev => ({ ...prev, ...data }));
         } catch (err) {
@@ -46,9 +47,8 @@ export function Settings() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const res = await fetch(`${API_URL}/api/settings`, {
+            const res = await secureFetch(`${API_URL}/api/settings`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)
             });
             const data = await res.json();

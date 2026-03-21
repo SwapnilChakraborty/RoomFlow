@@ -55,11 +55,12 @@ export function AdminLogin() {
                 throw new Error(data.error || 'Login failed');
             }
 
-            // Store staff data
-            localStorage.setItem('staff', JSON.stringify(data));
+            // Store staff data and token
+            localStorage.setItem('staff', JSON.stringify(data.user));
+            localStorage.setItem('staff_token', data.token);
 
             // Redirect based on role
-            if (data.role === 'Admin') {
+            if (data.user.role === 'Admin') {
                 navigate('/admin');
             } else {
                 navigate('/staff');

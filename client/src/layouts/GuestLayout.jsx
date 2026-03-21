@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { Home, Bell, MessageSquare, User, Utensils, Sparkles, Menu, Compass, CheckCircle2, Info, X } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 import { useSocket } from '../context/SocketContext';
+import { NotificationDropdown } from '../components/ui/NotificationDropdown';
 import { ChatBot } from '../components/ChatBot';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,6 +11,24 @@ export function GuestLayout() {
     const navigate = useNavigate();
     const { socket } = useSocket();
     const [toasts, setToasts] = React.useState([]);
+    const [notifications, setNotifications] = React.useState([]);
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    const addNotification = (notif) => {
+        setNotifications(prev => [
+            { ...notif, read: false, id: Date.now() + Math.random() },
+            ...prev
+        ].slice(0, 20));
+    };
+
+    const handleClearAll = () => {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    };
+
+    const handleRead = (id) => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    };
 
     const addToast = (title, message, type = 'info') => {
         const id = Date.now();
@@ -39,6 +58,13 @@ export function GuestLayout() {
             addToast('Status Update', `Your request status is now: ${data.status}`, 'success');
         });
 
+        socket.on('new_notification', (notif) => {
+            if (notif.role === 'guest') {
+                addNotification(notif);
+                addToast(notif.title, notif.message, 'info');
+            }
+        });
+
         socket.on('admin_activity', (data) => {
             const customer = JSON.parse(localStorage.getItem('customer') || '{}');
             const roomNumber = (customer.room?.roomNumber || customer.room || '').toString();
@@ -55,6 +81,7 @@ export function GuestLayout() {
         return () => {
             socket.off('guest_checkout', handleGuestCheckout);
             socket.off('status_updated');
+            socket.off('new_notification');
             socket.off('admin_activity');
         };
     }, [socket, navigate]);
@@ -69,12 +96,12 @@ export function GuestLayout() {
 
                 <Logo className="scale-90" />
 
-                <div className="relative">
-                    <button className="text-primary hover:bg-slate-50 p-2 rounded-xl transition-colors">
-                        <Bell size={24} />
-                    </button>
-                    <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-accent rounded-full border-2 border-white shadow-sm"></span>
-                </div>
+                <NotificationDropdown 
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    onClearAll={handleClearAll}
+                    onRead={handleRead}
+                />
             </header>
 
             {/* Main Content */}

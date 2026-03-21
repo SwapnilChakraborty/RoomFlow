@@ -7,6 +7,7 @@ import { MoreVertical, User, Sparkles, AlertTriangle, Bed, CheckCircle2, Waves, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function RoomManagement() {
     const [rooms, setRooms] = useState([]);
@@ -65,7 +66,7 @@ export function RoomManagement() {
 
     const fetchRooms = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/rooms`);
+            const response = await secureFetch(`${API_URL}/api/rooms`);
             const data = await response.json();
             setRooms(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -80,9 +81,8 @@ export function RoomManagement() {
         e.preventDefault();
         setAllotting(true);
         try {
-            const response = await fetch(`${API_URL}/api/allot-room`, {
+            const response = await secureFetch(`${API_URL}/api/allot-room`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roomNumber: allotModal.roomNumber, guestName, phone, checkIn, checkOut })
             });
 
@@ -106,9 +106,8 @@ export function RoomManagement() {
     const handleCheckout = async (roomNumber) => {
         if (!window.confirm('Are you sure you want to checkout this guest?')) return;
         try {
-            const response = await fetch(`${API_URL}/api/checkout`, {
+            const response = await secureFetch(`${API_URL}/api/checkout`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roomNumber })
             });
 
@@ -122,9 +121,8 @@ export function RoomManagement() {
 
     const handleUpdateStatus = async (roomNumber, status) => {
         try {
-            const response = await fetch(`${API_URL}/api/update-room-status`, {
+            const response = await secureFetch(`${API_URL}/api/update-room-status`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roomNumber, status })
             });
             if (!response.ok) throw new Error('Status update failed');
@@ -139,9 +137,8 @@ export function RoomManagement() {
         e.preventDefault();
         setAdding(true);
         try {
-            const response = await fetch(`${API_URL}/api/rooms`, {
+            const response = await secureFetch(`${API_URL}/api/rooms`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newRoom)
             });
 
@@ -161,11 +158,12 @@ export function RoomManagement() {
         }
     };
 
+
     const handleDeleteRoom = async (roomId, roomNumber) => {
         if (!window.confirm(`Are you sure you want to PERMANENTLY remove Room ${roomNumber}? This cannot be undone.`)) return;
         setDeleting(true);
         try {
-            const response = await fetch(`${API_URL}/api/rooms/${roomId}`, {
+            const response = await secureFetch(`${API_URL}/api/rooms/${roomId}`, {
                 method: 'DELETE'
             });
 

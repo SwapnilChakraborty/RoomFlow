@@ -18,6 +18,7 @@ import { Button } from '../components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function Maintenance() {
     const [tasks, setTasks] = useState([]);
@@ -41,7 +42,7 @@ export function Maintenance() {
 
     const fetchTasks = async () => {
         try {
-            const response = await fetch(`${API_URL}/api/maintenance`);
+            const response = await secureFetch(`${API_URL}/api/maintenance`);
             const data = await response.json();
             setTasks(data);
         } catch (err) {
@@ -53,9 +54,8 @@ export function Maintenance() {
 
     const handleComplete = async (roomNumber) => {
         try {
-            const response = await fetch(`${API_URL}/api/update-room-status`, {
+            const response = await secureFetch(`${API_URL}/api/update-room-status`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roomNumber, status: 'Ready' })
             });
             if (!response.ok) throw new Error('Failed to update status');

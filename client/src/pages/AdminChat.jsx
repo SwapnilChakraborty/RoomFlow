@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
 import { Card } from '../components/ui/Card';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function AdminChat() {
     const [chats, setChats] = useState([]); // List of active room chats
@@ -16,7 +17,7 @@ export function AdminChat() {
     useEffect(() => {
         const fetchInitialChats = async () => {
             try {
-                const res = await fetch(`${API_URL}/api/rooms`);
+                const res = await secureFetch(`${API_URL}/api/rooms`);
                 const rooms = await res.json();
                 // Only show rooms that are currently occupied
                 const activeRooms = rooms.filter(r => r.status === 'Occupied');
@@ -76,7 +77,7 @@ export function AdminChat() {
 
     useEffect(() => {
         if (selectedRoom) {
-            fetch(`${API_URL}/api/chat/${selectedRoom}`)
+            secureFetch(`${API_URL}/api/chat/${selectedRoom}`)
                 .then(res => res.json())
                 .then(data => setMessages(data));
         }

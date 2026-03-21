@@ -15,6 +15,7 @@ import {
     DollarSign
 } from 'lucide-react';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function CRM() {
     const [leads, setLeads] = useState([]);
@@ -28,7 +29,7 @@ export function CRM() {
 
     const fetchLeads = async () => {
         try {
-            const res = await fetch(`${API_URL}/api/crm/leads`);
+            const res = await secureFetch(`${API_URL}/api/crm/leads`);
             const data = await res.json();
             setLeads(data);
         } catch (err) {
@@ -41,9 +42,8 @@ export function CRM() {
     const handleAddLead = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch(`${API_URL}/api/crm/leads`, {
+            const res = await secureFetch(`${API_URL}/api/crm/leads`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newLead)
             });
             const data = await res.json();
@@ -57,9 +57,8 @@ export function CRM() {
 
     const updateLeadStatus = async (id, status) => {
         try {
-            const res = await fetch(`${API_URL}/api/crm/leads/${id}`, {
+            const res = await secureFetch(`${API_URL}/api/crm/leads/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
             });
             const updated = await res.json();

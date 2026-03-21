@@ -3,6 +3,7 @@ import { TrendingUp, CheckCircle2, Clock, Star, ArrowUpRight, ArrowDownRight, Ac
 import { Card } from '../components/ui/Card';
 import { motion } from 'framer-motion';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 export function Performance() {
     const [data, setData] = useState(null);
@@ -11,7 +12,7 @@ export function Performance() {
 
     useEffect(() => {
         const staffId = staff.id || staff._id; // Cover both cases
-        fetch(`${API_URL}/api/staff-performance/${staffId}`)
+        secureFetch(`${API_URL}/api/staff-performance/${staffId}`)
             .then(res => res.json())
             .then(json => {
                 setData(json);

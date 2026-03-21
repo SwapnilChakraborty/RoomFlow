@@ -3,6 +3,7 @@ import { Clock, CheckCircle2, ClipboardList } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from '../config/api';
+import { secureFetch } from '../utils/api';
 
 const NOTIFICATION_SOUNDS = {
     order: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', // Ding
@@ -39,7 +40,7 @@ export function StaffTasks() {
     useEffect(() => {
         const fetchInitialTasks = async () => {
             try {
-                const response = await fetch(`${API_URL}/api/activity`);
+                const response = await secureFetch(`${API_URL}/api/activity`);
                 const data = await response.json();
                 setTasks(data.map(item => ({
                     id: item.id,
